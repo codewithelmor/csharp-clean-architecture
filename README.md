@@ -44,10 +44,10 @@ MyProject.Application
       |-- ManagerRequirement.cs
 |-- Services (implements interfaces from Core)
 |-- Mappers
-├── Validators
-│   ├── CreateUserValidator.cs
-│   ├── UpdateUserValidator.cs
-│   └── ...
+|-- Validators
+   |-- CreateUserValidator.cs
+   |-- UpdateUserValidator.cs
+   |-- ...
 ```
 
 3 ```Infrastructure Layer```:
