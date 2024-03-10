@@ -38,7 +38,8 @@ MyProject.Application
 |-- UseCases
    |-- SomeUseCase.cs
 |-- Authorization
-   |-- AuthorizationHandler.cs
+   |-- AuthorizationHandlers
+      |-- AuthorizationHandler.cs
    |-- RoleRequirements
       |-- AdminRequirement.cs
       |-- ManagerRequirement.cs
