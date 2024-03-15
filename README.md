@@ -12,6 +12,8 @@ MyProject.Core
 |-- Interfaces
    |-- Repositories
       |-- IBaseRepository.cs
+   |-- Specifications
+      |-- ISomeSpecification.cs
    |-- IUnitOfWork.cs
 |-- Services
 |-- Repositories
@@ -75,6 +77,8 @@ MyProject.Infrastructure
 |-- ExternalServices
 |-- Repositories (implements interfaces from Core)
 |-- Migrations
+|-- Specifications
+   |-- SomeSpecification.cs
 |-- BackgroundServices
    |-- BackgroundTaskService.cs
    |-- OtherBackgroundService.cs
