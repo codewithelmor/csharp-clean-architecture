@@ -126,6 +126,13 @@ MyProject.CrossCutting
 |-- Logging
 |-- Authentication
 |-- Validation
+   |-- Exceptions
+      |-- ValidationException.cs
+   |-- PipelineBehaviors
+      |-- ValidationBehavior.cs
+   |-- FormatValidators
+      |-- EmailFormatValidator.cs
+      |-- PasswordStrengthValidator.cs
 ```
 
 Remember to maintain dependencies inwards, meaning layers closer to the core should not depend on outer layers. This promotes a clear separation of concerns and makes the codebase more modular and testable.
