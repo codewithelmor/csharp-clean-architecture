@@ -33,7 +33,7 @@ MyProject.Core
 
 2. ```Application Layer```:
 * **What it does:** Implements and orchestrates user workflows and use cases. It acts as the coordinator of data, taking commands from the UI, pulling entities using the Core interfaces, and executing business logic.
-* **What it contains:** Concrete use case execution flows, system authorization policies, mapping tools to format output, and request validators (e.g., checking that passwords match or email fields are valid before saving data).
+* **What it contains:** Concrete use case execution flows, system authorization policies, mapping tools to format output, request validators (e.g., checking that passwords match or email fields are valid before saving data) and data transfer objects (DTOs includes Request and Reponse)
 
 ```plaintext
 MyProject.Application
@@ -51,6 +51,7 @@ MyProject.Application
    |-- CreateUserValidator.cs
    |-- UpdateUserValidator.cs
    |-- ...
+|-- DTOs (Request / Response)
 ```
 
 3 ```Infrastructure Layer```:
@@ -92,14 +93,13 @@ MyProject.Infrastructure
 
 4. ```Presentation Layer```:
 * **What it does:** The user-facing interface or network API boundary. Its only job is to receive a network call or input request, translate it into an application action (like sending a command to a use case), and return the response layout back to the caller.
-* **What it contains:** API controllers, frontend Razor views, user input view models, and simple data transfer objects (DTOs) utilized strictly to format JSON responses.
+* **What it contains:** API controllers, frontend Razor views, view models.
 
 ```plaintext
 MyProject.Presentation
 |-- Controllers (for API)
 |-- Views (for UI)
 |-- ViewModels
-|-- DTOs
 ```
 
 5. ```Cross-cutting Concerns```:
