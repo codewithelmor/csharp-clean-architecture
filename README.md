@@ -66,7 +66,7 @@ MyProject.Application
 
 3 ```Infrastructure Layer```:
 * **What it does:** Deals with external, data-driven concerns and external agencies. It implements the abstractions defined in the Core Layer (like Data Access, Email Providers, or Crypto engines). It depends directly on Core and Application.
-* **What it contains:** Technical plumbing like EF Core DbContexts, repository database implementations, SQL migrations, background/hosted workers, data generator seeds, and web-specific infrastructure like custom HTTP middlewares or AppSettings parsing.
+* **What it contains:** Technical plumbing like EF Core DbContexts, repository database implementations, SQL migrations, background/hosted workers, data generator seeds, and AppSettings parsing.
 
 ```plaintext
 MyProject.Infrastructure
@@ -93,17 +93,18 @@ MyProject.Infrastructure
 |-- BackgroundServices
    |-- BackgroundTaskService.cs
    |-- OtherBackgroundService.cs
-|-- Middlewares
-   |-- CustomMiddleware.cs
-   |-- OtherMiddleware.cs
 |-- DummyDataGenerators
    |-- TestDataGenerator.cs
    |-- OtherDataGenerator.cs
 ```
 
 4. ```Presentation Layer```:
-* **What it does:** The user-facing interface or network API boundary. Its only job is to receive a network call or input request, translate it into an application action (like sending a command to a use case), and return the response layout back to the caller.
-* **What it contains:** API controllers, frontend Razor views, view models.
+* **What it does:** The user-facing interface or network API boundary. Its only job is to receive a network call or input request, process or validate it via the web pipeline, translate it into an application action (like sending a command to a use case), and return the response layout back to the caller.
+* **What it contains:** API controllers, frontend Razor views, view models, and custom HTTP middlewares.
+* **Middleware Specifics:** 
+  * **Role:** Custom HTTP Middlewares process framework-level HTTP requests and responses (intercepting `HttpContext`). Because they are coupled to the ASP.NET Core framework (`IApplicationBuilder`, `RequestDelegate`), they belong strictly in the Presentation Layer to ensure inner layers remain framework-agnostic.
+  * **Architectural Boundaries:** Middlewares must never perform direct data access or bypass architecture bounds by referencing infrastructure database classes like `DbContext`. If a middleware requires database access (e.g., verifying a tenant subdomain or reading user permissions), it must consume an abstraction (interface) exposed by the **Application layer**.
+  * **Lifetime Considerations:** Because standard middlewares are constructed as singletons, scoped services (such as a database access service) cannot be injected into the constructor. They must instead be injected directly into the parameters of the `InvokeAsync` method so they safely resolve per HTTP request.
 * **ViewModel Specifics:** 
   * **Role:** They belong exclusively to this layer. They shape and hold data tailored to a specific user-facing layout screen (like Blazor components or MVC Razor views). They hold state properties that the backend doesn't care about—such as UI error display strings, loading spinners (`IsSaving`), interactive boolean flags, or style themes.
   * **Workflow:** UI elements bind directly to the ViewModel. On initialization, incoming **Response DTOs** from the Application layer are mapped into a local ViewModel. Upon user interaction or execution (such as a form submit), the page maps the values out of the **ViewModel** into an Application-friendly **Request DTO** to safely pass through the boundaries.
@@ -111,6 +112,9 @@ MyProject.Infrastructure
 ```plaintext
 MyProject.Presentation
 |-- Controllers (for API)
+|-- Middlewares
+   |-- CustomMiddleware.cs
+   |-- OtherMiddleware.cs
 |-- Views (for UI / Pages)
 |-- ViewModels
    |-- UserProfileViewModel.cs
