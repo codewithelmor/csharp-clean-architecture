@@ -10,11 +10,16 @@ In a clean architecture with C#, project separation typically involves organizin
 MyProject.Core
 |-- Entities
 |-- Interfaces
+   |-- Services
+      |-- IBaseService.cs
+   |-- ExternalServices
+      |-- IBaseExternalService.cs      
    |-- Repositories
       |-- IBaseRepository.cs
    |-- Specifications
       |-- ISomeSpecification.cs
    |-- IUnitOfWork.cs
+|-- ExternalServices
 |-- Services
 |-- Repositories
 |-- Exceptions
