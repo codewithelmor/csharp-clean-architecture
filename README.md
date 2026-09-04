@@ -34,6 +34,10 @@ MyProject.Core
 2. ```Application Layer```:
 * **What it does:** Implements and orchestrates user workflows and use cases. It acts as the coordinator of data, taking commands from the UI, pulling entities using the Core interfaces, and executing business logic.
 * **What it contains:** Concrete use case execution flows, system authorization policies, mapping tools to format output, request validators (e.g., checking that passwords match or email fields are valid before saving data) and data transfer objects (DTOs includes Request and Reponse)
+* **DTO Specifics (Request / Response):** 
+  * **Role:** They serve as the application's input/output network contracts. They cross into the Presentation Layer to accept data or return results, but they belong to the Application layer to keep the Domain pure. They contain zero user-interface or visual state logic.
+  * **Request Models:** Flat data carriers mapping incoming HTTP payloads or user intents (e.g., `CreateProductRequest`).
+  * **Response Models:** Structured wrappers mapping outgoing results securely back over the wire while hiding raw database tracks (e.g., `ProductResponse`).
 
 ```plaintext
 MyProject.Application
@@ -52,6 +56,12 @@ MyProject.Application
    |-- UpdateUserValidator.cs
    |-- ...
 |-- DTOs (Request / Response)
+   |-- Requests
+      |-- CreateUserRequest.cs
+      |-- UpdateProductRequest.cs
+   |-- Responses
+      |-- UserResponse.cs
+      |-- ProductResponseDto.cs
 ```
 
 3 ```Infrastructure Layer```:
@@ -94,12 +104,17 @@ MyProject.Infrastructure
 4. ```Presentation Layer```:
 * **What it does:** The user-facing interface or network API boundary. Its only job is to receive a network call or input request, translate it into an application action (like sending a command to a use case), and return the response layout back to the caller.
 * **What it contains:** API controllers, frontend Razor views, view models.
+* **ViewModel Specifics:** 
+  * **Role:** They belong exclusively to this layer. They shape and hold data tailored to a specific user-facing layout screen (like Blazor components or MVC Razor views). They hold state properties that the backend doesn't care about—such as UI error display strings, loading spinners (`IsSaving`), interactive boolean flags, or style themes.
+  * **Workflow:** UI elements bind directly to the ViewModel. On initialization, incoming **Response DTOs** from the Application layer are mapped into a local ViewModel. Upon user interaction or execution (such as a form submit), the page maps the values out of the **ViewModel** into an Application-friendly **Request DTO** to safely pass through the boundaries.
 
 ```plaintext
 MyProject.Presentation
 |-- Controllers (for API)
-|-- Views (for UI)
+|-- Views (for UI / Pages)
 |-- ViewModels
+   |-- UserProfileViewModel.cs
+   |-- ProductFormViewModel.cs
 ```
 
 5. ```Cross-cutting Concerns```:
