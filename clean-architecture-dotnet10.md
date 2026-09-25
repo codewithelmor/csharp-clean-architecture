@@ -212,6 +212,7 @@ CleanArchitecture.sln
 │       │       └── RegisterCustomerRequest.cs
 │       ├── Middleware/
 │       │   ├── GlobalExceptionHandler.cs
+│       │   ├── CorrelationIdMiddleware.cs
 │       │   └── RequestContextLoggingMiddleware.cs
 │       ├── Filters/
 │       │   └── ApiKeyAuthorizationFilter.cs
@@ -313,7 +314,13 @@ CleanArchitecture.sln
 - **`Endpoints/`**: Minimal API endpoints grouped by feature. Each maps HTTP to a call on an application service (`IOrderService`, `ICustomerService`), with no business logic.
 - **`Controllers/`**: the MVC-controller alternative. Pick either Endpoints or Controllers, not both.
 - **`Contracts/`**: HTTP request/response models. They are separate from Application DTOs so the public API can evolve independently of internal use cases; endpoints map between the two.
-- **`Middleware/`**: global exception handling (`IExceptionHandler`) and request logging enrichment.
+- **`Middleware/`**: global exception handling (`IExceptionHandler`), correlation ID propagation, and request logging enrichment. Order in `Program.cs` matters: correlation ID runs first so every later component — logging, exception handling — can see it.
+  - **`CorrelationIdMiddleware.cs`**: a hand-rolled middleware, not a package. It reads an inbound `X-Correlation-Id` header if present, otherwise generates a new `Guid`, and:
+    1. Stashes the ID on `HttpContext.Items` (or a small `ICorrelationIdProvider` registered as scoped) so anything later in the request — services, repositories, event handlers — can read it without touching `HttpContext` directly.
+    2. Pushes it into an `ILogger` scope (`logger.BeginScope(...)`) so every log line for the request carries it automatically.
+    3. Writes it back onto the response headers before the response starts, so callers can correlate their request with server-side logs.
+    4. Flows it onto any outbound `HttpClient` calls (via a `DelegatingHandler` in Infrastructure/ExternalServices) and onto outbox/queue messages, so the ID survives across service boundaries.
+  - **`RequestContextLoggingMiddleware.cs`**: enriches the log scope further (user ID, tenant, route), typically registered immediately after `CorrelationIdMiddleware` so it can include the correlation ID's scope.
 - **`Filters/`**: endpoint or action filters for cross-cutting HTTP concerns.
 - **`Extensions/`**: helpers mapping `Result` → `IResult`/`ProblemDetails`, plus pipeline and service setup.
 - **`OpenApi/`**: .NET 10 built-in OpenAPI document transformers (JWT security scheme, metadata).
@@ -349,6 +356,7 @@ Dependencies stay inward throughout: the endpoint knows the service *interface*,
 - **Application services vs. use case classes**: this layout groups related use cases in one service per feature (`OrderService`). If services grow large, split them into one class per use case (`CreateOrderUseCase`, `CancelOrderUseCase`) with a shared `IUseCase<TRequest, TResponse>` interface. This is the same architecture with finer granularity.
 - **Read-heavy screens**: without a separate read model, complex list or report views are served by repository methods or specifications that project straight to DTOs. If reads become a bottleneck, add read-optimized repository methods before considering a heavier pattern.
 - **Cross-cutting concerns**: without pipeline behaviors, apply validation and transactions explicitly in services, or move them to the edges (endpoint filters for validation, `IUnitOfWork` committed once at the end of each service method). Logging and exception handling stay in Api middleware.
+- **Correlation IDs**: `CorrelationIdMiddleware` is intentionally hand-rolled rather than pulled from a package — it's ~30 lines, and owning it means you control the header name, the ID format, and exactly where it gets attached (log scope, response header, outbound `HttpClient`, outbox messages). It must be one of the first entries in the middleware chain in `Program.cs`, before exception handling and logging, so those components can pick up the ID. If you also use OpenTelemetry, treat the correlation ID as a business-facing concern distinct from the OTel trace ID: keep both, since callers and support tooling look for the simple header while tracing systems use the W3C `traceparent`.
 - **Shared Contracts**: large systems sometimes add a separate `Contracts` or `SharedKernel` project.
 - **Feature-folder vs. technical-folder**: the tree above organizes Application by feature, which is the prevailing modern practice over top-level `Services/`, `Dtos/`, `Validators/` folders.
 - **Small projects**: this is the "all possible" version. You don't need everything, so start with Domain, Application, Infrastructure, and Api, and add the rest when a real need appears.
