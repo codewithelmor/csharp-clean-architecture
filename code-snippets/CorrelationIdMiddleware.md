@@ -1,3 +1,14 @@
+# CorrelationIdMiddleware
+
+Hand-rolled middleware that ensures every request has a correlation ID: it
+reuses an inbound `X-Correlation-Id` header if present, otherwise generates
+one. The ID is made available via `ICorrelationIdProvider`, attached to the
+logging scope, tied into the current `Activity`, and echoed back on the
+response so callers can correlate their request with server-side logs.
+
+## Middleware — `CleanArchitecture.Api/Middleware/CorrelationIdMiddleware.cs`
+
+```csharp
 using System.Diagnostics;
 
 namespace CleanArchitecture.Api.Middleware;
@@ -62,17 +73,28 @@ public sealed class CorrelationIdMiddleware
         return Guid.NewGuid().ToString();
     }
 }
+```
 
-/// <summary>
-/// Scoped accessor so services outside the HTTP pipeline (application
-/// services, background dispatch, outbox writers) can read the current
-/// request's correlation ID without a dependency on HttpContext.
-/// </summary>
+## Provider abstraction — `CleanArchitecture.Application/Abstractions/Services/ICorrelationIdProvider.cs`
+
+Scoped accessor so services outside the HTTP pipeline (application services,
+background dispatch, outbox writers) can read the current request's
+correlation ID without a dependency on `HttpContext`.
+
+```csharp
+namespace CleanArchitecture.Application.Abstractions.Services;
+
 public interface ICorrelationIdProvider
 {
     string CorrelationId { get; }
     void Set(string correlationId);
 }
+```
+
+## Provider implementation — `CleanArchitecture.Infrastructure/Services/CorrelationIdProvider.cs`
+
+```csharp
+namespace CleanArchitecture.Infrastructure.Services;
 
 public sealed class CorrelationIdProvider : ICorrelationIdProvider
 {
@@ -80,10 +102,21 @@ public sealed class CorrelationIdProvider : ICorrelationIdProvider
 
     public void Set(string correlationId) => CorrelationId = correlationId;
 }
+```
 
-// Program.cs registration:
-//
-// builder.Services.AddScoped<ICorrelationIdProvider, CorrelationIdProvider>();
+## Registration — `Program.cs`
+
+```csharp
+builder.Services.AddScoped<ICorrelationIdProvider, CorrelationIdProvider>();
+
 // ...
-// app.UseMiddleware<CorrelationIdMiddleware>(); // before exception handling & logging
-// app.UseMiddleware<RequestContextLoggingMiddleware>();
+
+app.UseMiddleware<CorrelationIdMiddleware>(); // before exception handling & logging
+app.UseMiddleware<RequestContextLoggingMiddleware>();
+```
+
+`ICorrelationIdProvider` is registered as scoped (request-lifetime), and the
+middleware sets it before calling `_next`, so anything resolved later in the
+same request — application services, repositories, an outbox writer picking
+up the ID for a queued message — can inject `ICorrelationIdProvider` and read
+it directly.
